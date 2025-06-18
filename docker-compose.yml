@@ -1,0 +1,172 @@
+services:
+  ubuntu:
+    build:
+      context: .
+      dockerfile: ubuntu/Dockerfile
+    image: henry529/ubuntu:22.04
+    container_name: local_ubuntu
+    working_dir: /root
+    restart: unless-stopped
+    tty: true
+  beancount:
+    build:
+      context: .
+      dockerfile: beancount/Dockerfile
+    image: henry529/beancount:latest
+    container_name: local_beancount
+    working_dir: /root
+    restart: unless-stopped
+    volumes:
+      - ./beancount/data:/root/beancount
+    ports:
+      - 5001:5001
+  redis:
+    container_name: local_redis
+    image: redis:latest
+    restart: unless-stopped
+    volumes:
+      - ./redis/data:/data
+    ports:
+      - 6379:6379
+    command: redis-server --requirepass 1234asdw --loglevel warning
+  nginx:
+    image: nginx:latest
+    container_name: local_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/www:/etc/nginx/www
+    ports:
+      - 80:80
+  mysql:
+    image: mysql:8.4.0
+    container_name: local_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234asdw
+      TZ: Asia/Shanghai
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+    ports:
+      - 3306:3306
+  mongodb:
+    image: mongo:latest
+    restart: always
+    container_name: local_mongodb
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongodb/data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1234asdw
+  rabbitmq:
+    container_name: local_rabbitmq
+    build:
+      context: .
+      dockerfile: rabbitmq/Dockerfile
+    image: henry529/rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: 1234asdw
+    volumes:
+      - ./rabbitmq/data:/var/lib/rabbitmq
+    ports:
+      - 15672:15672 # 管理监控端口
+      # - 15671:15671 # 管理监控端口(HTTPS)
+      - 5672:5672 # 程序与mq交互的访问端口
+      - 61613:61613 # STOMP
+  es:
+    container_name: local_es
+    build:
+      context: .
+      dockerfile: elasticsearch/Dockerfile
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - "discovery.type=single-node"
+      - "cluster.routing.allocation.disk.threshold_enabled=false" # 禁用磁盘阈值检查
+    volumes:
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+      - ./elasticsearch/logs:/usr/share/elasticsearch/logs
+    ports:
+      - 9200:9200
+      - 9300:9300  # 心跳检查端口
+  kibana:
+    container_name: local_kibana
+    image: docker.elastic.co/kibana/kibana:7.17.5
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es:9200
+    ports:
+      - 5601:5601
+  tshock:
+    build:
+      context: .
+      dockerfile: tshock/Dockerfile
+    image: henry529/tshock:latest
+    container_name: local_tshock
+    hostname: local_tshock
+    working_dir: /root
+    privileged: true
+    tty: true
+    restart: unless-stopped
+    volumes:
+      - ./tshock/data:/root/.local/share/Terraria
+    ports:
+      - 7777:7777
+  ftpd:
+    image: fauria/vsftpd
+    container_name: local_ftpd
+    restart: unless-stopped
+    volumes:
+      - ./ftpd/data:/home/vsftpd
+    environment:
+      - FTP_USER=ftp
+      - FTP_PASS=1234asdw
+      - PASV_ADDRESS=127.0.0.1
+      - PASV_MIN_PORT=21100
+      - PASV_MAX_PORT=21110
+    ports:
+      - 20:20
+      - 21:21
+      - 21100-21110:21100-21110
+  sftpd:
+    image: atmoz/sftp
+    container_name: local_sftpd
+    restart: unless-stopped
+    volumes:
+      - ./sftpd/data:/home/sftp/upload
+    ports:
+      - 1122:22
+    environment:
+      - SFTP_USERS=sftp:1234asdw:1001
+
+
+  # postgresql:
+  #   image: postgres:latest
+  #   container_name: local_postgresql
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: testdb
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: 1234asdw
+  #   volumes:
+  #     - ./postgresql/data:/var/lib/postgresql/data
+  #   ports:
+  #     - 5432:5432
+  # mariadb:
+  #   image: mariadb:latest
+  #   container_name: local_mariadb
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_DATABASE: testdb
+  #     MYSQL_USER: henry529
+  #     MYSQL_PASSWORD: 1234asdw
+  #     MYSQL_RANDOM_ROOT_PASSWORD: '1'
+  #   volumes:
+  #     - ./mariadb/data:/var/lib/mysql
+  #   ports:
+  #     - 3308:3306
+
