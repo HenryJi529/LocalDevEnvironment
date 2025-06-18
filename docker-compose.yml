@@ -1,0 +1,159 @@
+services:
+  beancount:
+    build:
+      context: .
+      dockerfile: beancount/Dockerfile
+    container_name: local_beancount
+    working_dir: /root
+    restart: unless-stopped
+    volumes:
+      - ./beancount/data:/root/beancount
+    ports:
+      - 5001:5001
+  redis:
+    container_name: local_redis
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - ./redis/data:/data
+    ports:
+      - 6379:6379
+    command: redis-server --requirepass 1234asdw --loglevel warning
+  nginx:
+    image: nginx:1.27.3
+    container_name: local_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/www:/etc/nginx/www
+    ports:
+      - 80:80
+  mysql:
+    image: mysql:9
+    container_name: local_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234asdw
+      TZ: Asia/Shanghai
+    # command: 
+    #   - --max-allowed-packet=32M
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+    ports:
+      - 3306:3306
+  mongodb:
+    image: mongo:8
+    restart: always
+    container_name: local_mongodb
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongodb/configdb:/data/configdb
+      - ./mongodb/db:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1234asdw
+  rabbitmq:
+    container_name: local_rabbitmq
+    build:
+      context: .
+      dockerfile: rabbitmq/Dockerfile
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: 1234asdw
+    volumes:
+      - ./rabbitmq/data:/var/lib/rabbitmq
+    ports:
+      - 15672:15672 # 管理监控端口
+      # - 15671:15671 # 管理监控端口(HTTPS)
+      - 5672:5672 # 程序与mq交互的访问端口
+      - 61613:61613 # STOMP
+  es:
+    container_name: local_es
+    build:
+      context: .
+      dockerfile: elasticsearch/Dockerfile
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - "discovery.type=single-node"
+      - "cluster.routing.allocation.disk.threshold_enabled=false" # 禁用磁盘阈值检查
+    volumes:
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+      - ./elasticsearch/logs:/usr/share/elasticsearch/logs
+    ports:
+      - 9200:9200
+      - 9300:9300  # 心跳检查端口
+  kibana:
+    container_name: local_kibana
+    image: docker.elastic.co/kibana/kibana:7.17.5
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es:9200
+    ports:
+      - 5601:5601
+  tshock:
+    build:
+      context: .
+      dockerfile: tshock/Dockerfile
+    container_name: local_tshock
+    hostname: local_tshock
+    working_dir: /root
+    privileged: true
+    tty: true
+    restart: unless-stopped
+    volumes:
+      - ./tshock/data:/root/.local/share/Terraria
+    ports:
+      - 7777:7777
+  ftpd:
+    image: fauria/vsftpd
+    container_name: local_ftpd
+    restart: unless-stopped
+    volumes:
+      - ./ftpd/data:/home/vsftpd
+      - ./ftpd/logs:/var/log/vsftpd
+    environment:
+      - FTP_USER=ftp
+      - FTP_PASS=1234asdw
+      - PASV_ADDRESS=127.0.0.1
+      - PASV_MIN_PORT=21100
+      - PASV_MAX_PORT=21110
+    ports:
+      - 20:20
+      - 21:21
+      - 21100-21110:21100-21110
+  sftpd:
+    image: atmoz/sftp
+    container_name: local_sftpd
+    restart: unless-stopped
+    volumes:
+      - ./sftpd/data:/home/sftp/upload
+    ports:
+      - 1122:22
+    environment:
+      - SFTP_USERS=sftp:1234asdw:1001
+  neo4j:
+    image: neo4j:latest
+    container_name: local_neo4j
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - ./neo4j/data:/data
+      - ./neo4j/logs:/logs
+      - ./neo4j/import:/var/lib/neo4j/import
+      - ./neo4j/plugins:/plugins
+    environment:
+      # 核心环境变量
+      - NEO4J_AUTH=neo4j/1234asdw
+      # APOC插件
+      - NEO4J_PLUGINS=["apoc"]
+      # 允许从任何主机访问
+      - NEO4J_dbms_connector_bolt_advertised__address=:7687
+      - NEO4J_dbms_connector_http_advertised__address=:7474
+      # 安全设置
+      - NEO4J_dbms_security_auth__minimum__password__length=8
+      - NEO4J_dbms_security_auth__enabled=true
+    restart: unless-stopped

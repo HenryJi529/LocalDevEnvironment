@@ -1,0 +1,48 @@
+# 创建镜像:
+# multipass launch --name master --cpus 1 --memory 4G --disk 20G --cloud-init cloud-config.yml
+# multipass launch --name master --mount ./data:/home/ubuntu/data
+# 挂载目录:
+# multipass mount ./data master:/home/ubuntu/data
+
+password: 1234asdw
+chpasswd: { expire: False }
+ssh_pauth: True
+
+write_files:
+  - path: /home/ubuntu/.pip/pip.conf
+    content: "[global]\n# index-url = https://pypi.tuna.tsinghua.edu.cn/simple\nindex-url = https://pypi.doubanio.com/simple/\n"
+  - path: /etc/docker/daemon.json
+    content: '{"registry-mirrors": ["https://proxy.vvvv.ee"]}'
+
+runcmd:
+  ## APT
+  - sudo sed -i 's@//ports.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list.d/ubuntu.sources
+  - sudo apt-get -qq update
+  - sudo apt-get -qq upgrade
+  - sudo apt-get -qq autoremove
+  ## Tools
+  - sudo apt-get -qq install neofetch net-tools
+  - sudo apt-get -qq install tmux vim tldr
+  # - sudo snap install multipass-sshfs
+  ## Python
+  - sudo apt-get -qq install python3-pip virtualenv
+  ## Node
+  - curl -sL https://deb.nodesource.com/setup_20.x | bash -
+  - sudo apt-get install -y nodejs
+  ## Dir
+  - sudo mkdir -p /home/ubuntu/.local/share/
+  - sudo chmod 777 -R /home/ubuntu/.local/
+  # VSCode
+  - sudo mkdir /home/ubuntu/.vscode-server/
+  - sudo chmod 777 -R /home/ubuntu/.vscode-server/
+  ## Network
+  # - echo "export HOST_IP=192.168.2.159" | sudo tee -a /home/ubuntu/.bashrc
+  # - echo 'export https_proxy=http://${HOST_IP}:9981 http_proxy=http://${HOST_IP}:9981 all_proxy=socks5://${HOST_IP}:9981' | sudo tee -a /home/ubuntu/.bashrc
+  # - echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+  ## SSH
+  - echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDcsOD07WC+k1Mhd8BdR1IGMBLh+3yu1uIYktwLqc1pLK2sID8QUd0WXSw0BcxRbHHdnYgA+XCYmyzXwUNdKX8afZUauCG2BaVHHUlwJoduF3w44A74rVisYBYau99H73QB4T0oHnMhQ+aRHGv7TeeLNXJ5WiMQdBi0IBMowbcN2wESs67AGnUW/RvwhKpCVwydiBqWizWEG/Da9jFL8IhfxBtWS6+2EEPNG1XqZ2czVFtjtBvnODV33GtlplVk87xhNGZNXNDY9DmOLLu7bhl/i1YJf6jzCdsl/qFVdt0rbhGi/mAMf8blIdN2NQqlhFVOoNN7SoBZkDeMfhQWTLMEaX5N06Kft3+qxacI3zJSQ7ugiZ1pa/qpxtVfxm5vRXSaTN2/4ZVCOmhlPtdQS9CFJAZUPv7BSgxgSxi2gBNab9go3Pt9KCCC1j3L2ADpolHcOi42KuavdumRX0ANOdsTWqVT064twEeqZ9f2VcgSZ0JXOTGwgEQfKKPpesVqN/py9FXwloJVIv/jRZmPzQ+yP6wlb1YcVyZStbXjCIkjrQDEmXTvrEtfC/rsQalP0+VdSSVPHnoof+7qijXYwPwayrAtSkhZQL28yn/eaytzDPjm5CaLyRYBEf0OlUSA6iQyWZQWQBloFL48+ElHS5C4njp+lkWdDEo8wPifkZ1cMQ== jeep.jipu@outlook.com" | sudo tee -a /home/ubuntu/.ssh/authorized_keys
+  ## Docker
+  - curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+  - sudo gpasswd -a ${USER} docker
+  - sudo systemctl restart docker
+  - sudo chmod a+rw /var/run/docker.sock
