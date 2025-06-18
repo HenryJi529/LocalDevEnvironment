@@ -1,0 +1,36 @@
+# 创建镜像:
+# multipass launch --name master --cpus 1 --memory 2G --disk 5G --cloud-init cloud-config.yml
+# 挂载目录:
+# multipass mount ./data master:/home/ubuntu/data
+
+password: 1234asdw
+chpasswd: { expire: False }
+ssh_pauth: True
+
+apt_upgrade: true
+
+packages:
+  - tldr
+  - python3-pip
+  - virtualenv
+  - net-tools
+
+write_files:
+  - path: /home/ubuntu/.pip/pip.conf
+    content: "[global]\n# index-url = https://pypi.tuna.tsinghua.edu.cn/simple\nindex-url = https://pypi.doubanio.com/simple/\n"
+
+runcmd:
+  # dir
+  - sudo mkdir -p /home/ubuntu/.local/share/
+  - sudo chmod 777 -R /home/ubuntu/.local/
+  # apt
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get -qq update
+  - apt-get -qq upgrade
+  - apt-get -qq -y autoremove
+  # node
+  - curl -sL https://deb.nodesource.com/setup_20.x | bash -
+  - apt-get install -y nodejs
+  # ssh
+  - sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
+  - systemctl restart ssh
